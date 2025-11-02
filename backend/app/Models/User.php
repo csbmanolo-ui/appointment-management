@@ -8,7 +8,6 @@ use Illuminate\Foundation\Auth\User as Authenticatable; //Clase base para el mod
 use Illuminate\Notifications\Notifiable; //Trait que permite enviar notificaciones al usuario
 use Laravel\Sanctum\HasApiTokens; //Trait que permite gestionar tokens de API para el usuario
 use Spatie\Permission\Traits\HasRoles; //Trait que permite asignar roles y permisos al usuario
-
 class User extends Authenticatable
 {   //Clase que representa a un usuario en el sistema
     /** @use HasFactory<\Database\Factories\UserFactory> */
