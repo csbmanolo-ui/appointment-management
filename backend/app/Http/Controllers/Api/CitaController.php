@@ -18,16 +18,16 @@ class CitaController extends Controller
         $user = Auth::user();
         $citas = [];
 
+        /** @var \App\Models\User $user */
+
         if ($user->hasRole('Admin')) {
             // Admin: Ve todas las citas con toda la info
             $citas = Cita::with(['paciente.user', 'doctor.user', 'doctor.especialidad'])->get();
-        }
-        elseif ($user->hasRole('Doctor')) {
+        } elseif ($user->hasRole('Doctor')) {
             // Doctor: Ve solo sus citas, con la info del paciente
             $doctor = $user->doctor;
             $citas = $doctor->citas()->with(['paciente.user'])->get();
-        }
-        elseif ($user->hasRole('Paciente')) {
+        } elseif ($user->hasRole('Paciente')) {
             // Paciente: Ve solo sus citas, con la info del doctor
             $paciente = $user->paciente;
             $citas = $paciente->citas()->with(['doctor.user', 'doctor.especialidad'])->get();
@@ -43,6 +43,8 @@ class CitaController extends Controller
     public function store(Request $request)
     {
         $user = Auth::user();
+
+        /** @var \App\Models\User $user */
 
         $request->validate([
             'doctor_id' => 'required|integer|exists:doctores,id',
@@ -82,6 +84,8 @@ class CitaController extends Controller
     {
         $user = Auth::user();
 
+        /** @var \App\Models\User $user */
+
         // Admin puede ver todo
         if ($user->hasRole('Admin')) {
             return response()->json($cita->load(['paciente.user', 'doctor.user']));
@@ -89,12 +93,12 @@ class CitaController extends Controller
 
         // Doctor solo ve sus citas
         if ($user->hasRole('Doctor') && $user->doctor->id === $cita->doctor_id) {
-             return response()->json($cita->load(['paciente.user']));
+            return response()->json($cita->load(['paciente.user']));
         }
 
         // Paciente solo ve sus citas
         if ($user->hasRole('Paciente') && $user->paciente->id === $cita->paciente_id) {
-             return response()->json($cita->load(['doctor.user', 'doctor.especialidad']));
+            return response()->json($cita->load(['doctor.user', 'doctor.especialidad']));
         }
 
         // Si no es ninguno, no está autorizado
@@ -109,6 +113,8 @@ class CitaController extends Controller
     {
         $user = Auth::user();
 
+        /** @var \App\Models\User $user */
+
         // Un Doctor solo puede actualizar sus propias citas (para Sección 11)
         if ($user->hasRole('Doctor')) {
             if ($user->doctor->id !== $cita->doctor_id) {
@@ -121,7 +127,6 @@ class CitaController extends Controller
                 'notas_doctor' => 'nullable|string'
             ]);
             $cita->update($data);
-
         }
         // Un Admin puede actualizar todo (ej. cambiar el doctor)
         elseif ($user->hasRole('Admin')) {
