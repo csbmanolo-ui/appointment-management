@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -6,13 +7,14 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon'
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { AuthService } from '../../services/auth';
+import { AuthService } from '../../services/auth.service';
 
 
 @Component({
   selector: 'app-login',
   standalone: true, // <-- Tu app es Standalone
   imports: [
+    CommonModule,
     ReactiveFormsModule,
     MatCardModule,
     MatFormFieldModule,
@@ -21,9 +23,9 @@ import { AuthService } from '../../services/auth';
     MatIconModule
   ],
   templateUrl: './login.html',
-  styleUrl: './login.css'
+  styleUrls: ['./login.css']
 })
-export class Login { // <-- Usamos 'Login' como descubriste
+export class LoginComponent {
 
   loginForm: FormGroup; // Esta es la variable que controla el formulario
   errorMessage: string | null = null; // Para mostrar errores

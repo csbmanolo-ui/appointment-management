@@ -1,0 +1,69 @@
+<div class="dashboard-container">
+  <h1>Panel de Control</h1>
+  <p class="subtitle">Resumen de la clínica hoy</p>
+
+  <div class="cards-grid">
+    <mat-card class="stat-card blue">
+      <div class="card-icon">
+        <mat-icon>people</mat-icon>
+      </div>
+      <div class="card-content">
+        <h3>Pacientes</h3>
+        <p class="number">{{ stats.total_pacientes }}</p>
+      </div>
+    </mat-card>
+
+    <mat-card class="stat-card green">
+      <div class="card-icon">
+        <mat-icon>medical_services</mat-icon>
+      </div>
+      <div class="card-content">
+        <h3>Doctores</h3>
+        <p class="number">{{ stats.total_doctores }}</p>
+      </div>
+    </mat-card>
+
+    <mat-card class="stat-card orange">
+      <div class="card-icon">
+        <mat-icon>event_available</mat-icon>
+      </div>
+      <div class="card-content">
+        <h3>Citas Hoy</h3>
+        <p class="number">{{ stats.citas_hoy_count }}</p>
+      </div>
+    </mat-card>
+  </div>
+
+  <div class="agenda-section">
+    <h2>Agenda del Día</h2>
+
+    <div class="tabla-container mat-elevation-z2">
+      <table class="simple-table">
+        <thead>
+          <tr>
+            <th>Hora</th>
+            <th>Paciente</th>
+            <th>Doctor</th>
+            <th>Motivo</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let cita of stats.citas_hoy">
+            <td>{{ cita.fecha_hora_inicio | date : 'HH:mm' }}</td>
+            <td>{{ cita.paciente?.nombre }} {{ cita.paciente?.apellidos }}</td>
+            <td>{{ cita.doctor?.nombre }} {{ cita.doctor?.apellidos }}</td>
+            <td>{{ cita.motivo_consulta }}</td>
+            <td>
+              <span class="badge" [ngClass]="cita.estado">{{ cita.estado }}</span>
+            </td>
+          </tr>
+
+          <tr *ngIf="stats.citas_hoy.length === 0">
+            <td colspan="5" class="empty-state">No hay citas programadas para hoy.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

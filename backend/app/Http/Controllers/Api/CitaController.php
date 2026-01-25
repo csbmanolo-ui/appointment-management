@@ -3,154 +3,82 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Cita;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth; // <-- ¡Importante para saber quién está logueado!
+use App\Models\Cita;
 
 class CitaController extends Controller
 {
     /**
-     * READ: Muestra una lista de citas.
-     * La lógica cambia según el rol del usuario.
+     * GET: Listar todas las citas
+     * Trae también los datos del Paciente y el Doctor asociados.
      */
     public function index()
     {
-        $user = Auth::user();
-        $citas = [];
-
-        /** @var \App\Models\User $user */
-
-        if ($user->hasRole('Admin')) {
-            // Admin: Ve todas las citas con toda la info
-            $citas = Cita::with(['paciente.user', 'doctor.user', 'doctor.especialidad'])->get();
-        } elseif ($user->hasRole('Doctor')) {
-            // Doctor: Ve solo sus citas, con la info del paciente
-            $doctor = $user->doctor;
-            $citas = $doctor->citas()->with(['paciente.user'])->get();
-        } elseif ($user->hasRole('Paciente')) {
-            // Paciente: Ve solo sus citas, con la info del doctor
-            $paciente = $user->paciente;
-            $citas = $paciente->citas()->with(['doctor.user', 'doctor.especialidad'])->get();
-        }
-
+        // 'with' carga las relaciones definidas en el Modelo Cita
+        $citas = Cita::with(['paciente', 'doctor'])->get();
         return response()->json($citas);
     }
 
     /**
-     * CREATE: Guarda una nueva cita.
-     * Usado por Pacientes o por un Admin en nombre de un paciente.
+     * POST: Crear nueva cita
      */
+
     public function store(Request $request)
     {
-        $user = Auth::user();
-
-        /** @var \App\Models\User $user */
-
-        $request->validate([
-            'doctor_id' => 'required|integer|exists:doctores,id',
-            'fecha_hora_inicio' => 'required|date',
-            'fecha_hora_fin' => 'required|date|after:fecha_hora_inicio',
-            'motivo_consulta' => 'required|string',
+        $validated = $request->validate([
+            'paciente_id'       => 'required|exists:pacientes,id',
+            'doctor_id'         => 'required|exists:doctors,id',
+            'fecha_hora_inicio' => 'required|date', // Ej: 2025-10-20 10:00:00
+            'fecha_hora_fin'    => 'required|date|after:fecha_hora_inicio', // Ej: 2025-10-20 10:30:00
+            'motivo_consulta'   => 'required|string',
+            'notas_doctor'      => 'nullable|string',
+            'estado'            => 'nullable|string'
         ]);
 
-        $pacienteId = null;
-
-        if ($user->hasRole('Admin')) {
-            // Si es Admin, debe especificar qué paciente pide la cita
-            $request->validate(['paciente_id' => 'required|integer|exists:pacientes,id']);
-            $pacienteId = $request->paciente_id;
-        } else {
-            // Si es Paciente, la cita es para él mismo
-            $pacienteId = $user->paciente->id;
-        }
-
-        $cita = Cita::create([
-            'paciente_id' => $pacienteId,
-            'doctor_id' => $request->doctor_id,
-            'fecha_hora_inicio' => $request->fecha_hora_inicio,
-            'fecha_hora_fin' => $request->fecha_hora_fin,
-            'motivo_consulta' => $request->motivo_consulta,
-            'estado' => 'pendiente' // Estado por defecto
-        ]);
+        // Al crearla, el estado por defecto será 'pendiente' si no se envía
+        $cita = Cita::create($validated);
 
         return response()->json($cita, 201);
     }
 
     /**
-     * READ: Muestra una cita específica.
-     * Con seguridad para que solo el dueño o un Admin la vean.
+     * PUT: Modificar cita (Reprogramar, añadir notas, cambiar estado)
      */
-    public function show(Cita $cita)
+    public function update(Request $request, $id)
     {
-        $user = Auth::user();
+        $cita = Cita::find($id);
 
-        /** @var \App\Models\User $user */
-
-        // Admin puede ver todo
-        if ($user->hasRole('Admin')) {
-            return response()->json($cita->load(['paciente.user', 'doctor.user']));
+        if (!$cita) {
+            return response()->json(['message' => 'Cita no encontrada'], 404);
         }
 
-        // Doctor solo ve sus citas
-        if ($user->hasRole('Doctor') && $user->doctor->id === $cita->doctor_id) {
-            return response()->json($cita->load(['paciente.user']));
-        }
+        // Validamos solo lo que venga en la petición
+        $request->validate([
+            'fecha_hora_inicio' => 'sometimes|date',
+            'fecha_hora_fin'    => 'sometimes|date|after:fecha_hora_inicio',
+            'doctor_id'         => 'sometimes|exists:doctors,id',
+            'motivo_consulta'   => 'sometimes|string',
+            'notas_doctor'      => 'nullable|string',
+            'estado'            => 'sometimes|string'
+        ]);
 
-        // Paciente solo ve sus citas
-        if ($user->hasRole('Paciente') && $user->paciente->id === $cita->paciente_id) {
-            return response()->json($cita->load(['doctor.user', 'doctor.especialidad']));
-        }
+        $cita->update($request->all());
 
-        // Si no es ninguno, no está autorizado
-        return response()->json(['message' => 'No autorizado para ver esta cita'], 403);
+        return response()->json($cita);
     }
 
     /**
-     * UPDATE: Actualiza una cita.
-     * Usado por un Doctor (para añadir notas) o un Admin.
+     * DELETE: Eliminar cita
      */
-    public function update(Request $request, Cita $cita)
+    public function destroy($id)
     {
-        $user = Auth::user();
+        $cita = Cita::find($id);
 
-        /** @var \App\Models\User $user */
-
-        // Un Doctor solo puede actualizar sus propias citas (para Sección 11)
-        if ($user->hasRole('Doctor')) {
-            if ($user->doctor->id !== $cita->doctor_id) {
-                return response()->json(['message' => 'No autorizado'], 403);
-            }
-
-            // El doctor solo puede cambiar el estado o las notas
-            $data = $request->validate([
-                'estado' => 'sometimes|string|in:pendiente,confirmada,cancelada,completada',
-                'notas_doctor' => 'nullable|string'
-            ]);
-            $cita->update($data);
-        }
-        // Un Admin puede actualizar todo (ej. cambiar el doctor)
-        elseif ($user->hasRole('Admin')) {
-            $data = $request->validate([
-                'doctor_id' => 'sometimes|integer|exists:doctores,id',
-                'fecha_hora_inicio' => 'sometimes|date',
-                'fecha_hora_fin' => 'sometimes|date|after:fecha_hora_inicio',
-                'motivo_consulta' => 'sometimes|string',
-                'estado' => 'sometimes|string|in:pendiente,confirmada,cancelada,completada',
-                'notas_doctor' => 'nullable|string'
-            ]);
-            $cita->update($data);
+        if (!$cita) {
+            return response()->json(['message' => 'Cita no encontrada'], 404);
         }
 
-        return response()->json($cita, 200);
-    }
-
-    /**
-     * DELETE: Borra una cita.
-     * (Solo el Admin puede hacer esto, según routes/api.php)
-     */
-    public function destroy(Cita $cita)
-    {
         $cita->delete();
-        return response()->json(null, 204);
+        return response()->json(['message' => 'Cita eliminada']);
     }
 }

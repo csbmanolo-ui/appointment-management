@@ -1,0 +1,33 @@
+/* Contenedor principal con margen */
+.container {
+  margin-top: 20px;
+}
+
+/* Encabezado flex para separar Título y Botón */
+.header-simple {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px; /* Espacio antes de la tabla */
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e0e0e0; /* Una línea fina debajo del título como en Doctores */
+}
+
+h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Estilo para que la tabla sea transparente o blanca plana */
+.tabla-limpia {
+  width: 100%;
+  background-color: transparent; /* O white si prefieres fondo blanco */
+}
+
+/* Alineación de las celdas */
+th.mat-header-cell, td.mat-cell {
+  padding: 16px;
+  border-bottom: 1px solid #e0e0e0;
+}

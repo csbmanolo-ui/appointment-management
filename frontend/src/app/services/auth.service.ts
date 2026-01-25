@@ -1,6 +1,7 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject} from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
+import { Router } from '@angular/router';
 
 @Injectable({
   providedIn: 'root'
@@ -8,7 +9,7 @@ import { Observable, tap } from 'rxjs';
 export class AuthService {
 
   private apiUrl = 'http://127.0.0.1:8000/api';
-
+  private router = inject(Router);
 
   constructor(private http: HttpClient) { }
 
@@ -29,9 +30,19 @@ export class AuthService {
   /**
    * Cierra la sesión: borra el token del localStorage.
    */
-  logout(): void {
+  logout() {
+    // 1. Intentamos avisar al backend para que anule el token
+    this.http.post(`${this.apiUrl}/logout`, {}).subscribe({
+      next: () => this.cerrarSesionLocal(),
+      error: () => this.cerrarSesionLocal() // Si falla el server, cerramos igual por seguridad
+    });
+  }
+
+  private cerrarSesionLocal() {
+    // 2. Borramos el token del navegador
     localStorage.removeItem('token');
-    console.log('Sesión cerrada, token borrado de localStorage.');
+    // 3. Te echamos a la pantalla de login
+    this.router.navigate(['/login']);
   }
 
   /**
@@ -52,6 +63,6 @@ export class AuthService {
    * Comprueba si el usuario está autenticado (si existe un token).
    */
   isLoggedIn(): boolean {
-    return !!this.getToken();
+    return !!localStorage.getItem('token');
   }
 }

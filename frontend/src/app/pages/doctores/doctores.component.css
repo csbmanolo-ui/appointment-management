@@ -1,0 +1,29 @@
+.container {
+  margin-top: 20px;
+}
+
+.header-simple {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 500;
+  color: #333;
+}
+
+.tabla-limpia {
+  width: 100%;
+  background-color: transparent;
+}
+
+th.mat-header-cell, td.mat-cell {
+  padding: 16px;
+  border-bottom: 1px solid #e0e0e0;
+}

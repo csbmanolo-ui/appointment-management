@@ -1,17 +1,20 @@
-
-import { ApplicationConfig, importProvidersFrom, provideBrowserGlobalErrorListeners, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, importProvidersFrom, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient } from '@angular/common/http';
 import { routes } from './app.routes';
 import { ReactiveFormsModule } from '@angular/forms';
 
+// 1. AÑADIMOS 'withInterceptors' y la referencia a tu interceptor
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { authInterceptor } from './services/auth.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(),
+
+    // 2. ACTIVAMOS EL INTERCEPTOR AQUÍ
+    provideHttpClient(withInterceptors([authInterceptor])),
+
     importProvidersFrom(ReactiveFormsModule)
   ]
 };

@@ -1,0 +1,72 @@
+<h2 mat-dialog-title>Gestión de Cita</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="citaForm" class="flex flex-col gap-3 min-w-[350px] pt-4">
+    <mat-form-field appearance="outline">
+      <mat-label>Paciente</mat-label>
+      <mat-select formControlName="paciente_id">
+        <mat-option *ngFor="let p of pacientes" [value]="p.id">
+          {{ p.nombre }} {{ p.apellidos }}
+        </mat-option>
+      </mat-select>
+      <mat-error>El paciente es obligatorio</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Doctor</mat-label>
+      <mat-select formControlName="doctor_id">
+        <mat-option *ngFor="let d of doctores" [value]="d.id">
+          <span [style.color]="d.color">●</span> {{ d.nombre }} {{ d.apellidos }} ({{
+            d.especialidad
+          }})
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <div class="fechas-container" style="display: flex; gap: 10px">
+      <mat-form-field appearance="outline" style="flex: 1">
+        <mat-label>Inicio</mat-label>
+        <input matInput type="datetime-local" formControlName="fecha_hora_inicio" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" style="flex: 1">
+        <mat-label>Fin</mat-label>
+        <input matInput type="datetime-local" formControlName="fecha_hora_fin" />
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Motivo de Consulta</mat-label>
+      <textarea matInput formControlName="motivo_consulta" rows="2"></textarea>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Notas Internas</mat-label>
+      <textarea matInput formControlName="notas_doctor" rows="2"></textarea>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancelar()">Cancelar</button>
+  <button mat-raised-button color="primary" (click)="guardar()" [disabled]="citaForm.invalid">
+    Guardar Cita
+  </button>
+</mat-dialog-actions>
+
+<mat-dialog-actions align="end" class="gap-2">
+  <button
+    mat-mini-fab
+    color="warn"
+    *ngIf="isEditMode"
+    (click)="eliminar()"
+    type="button"
+    class="mr-auto"
+  >
+    <mat-icon>delete</mat-icon>
+  </button>
+  <button mat-button (click)="cancelar()">Cancelar</button>
+  <button mat-raised-button color="primary" (click)="guardar()" [disabled]="citaForm.invalid">
+    {{ isEditMode ? 'Actualizar' : 'Guardar' }}
+  </button>
+</mat-dialog-actions>

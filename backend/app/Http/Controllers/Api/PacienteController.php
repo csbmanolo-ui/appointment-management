@@ -25,45 +25,21 @@ class PacienteController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            // Datos para la tabla 'users'
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
+        // 1. Validamos los datos EXACTOS que envía el formulario de Angular
+        $validated = $request->validate([
+            'nombre' => 'required|string|max:255',
+            'apellidos' => 'required|string|max:255',
+            'email' => 'required|email|unique:pacientes,email', // Verifica único en tabla pacientes
+            'telefono' => 'required|string|max:20',
+            'seguro' => 'nullable|string|max:50'
         ]);
 
-        try {
-            DB::beginTransaction();
+        // 2. Creamos el registro directamente en la tabla pacientes
+        $paciente = \App\Models\Paciente::create($validated);
 
-            // 1. Crear el Usuario
-            $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'password' => Hash::make($request->password)
-            ]);
-
-            // 2. Asignar el Rol "Paciente"
-            $user->assignRole('Paciente');
-
-            // 3. Crear el Paciente
-            $paciente = $user->paciente()->create([]); // No hay campos extra por ahora
-
-            DB::commit();
-
-            return response()->json([
-                'message' => 'Paciente creado exitosamente',
-                'paciente' => $paciente->load('user')
-            ], 201);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'message' => 'Error al crear el paciente',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        // 3. Devolvemos el objeto creado (Código 201 = Created)
+        return response()->json($paciente, 201);
     }
-
     /**
      * READ: Muestra un solo paciente.
      */
@@ -71,70 +47,46 @@ class PacienteController extends Controller
     {
         return response()->json($paciente->load('user'));
     }
-
-    /**
-     * UPDATE: Actualiza un paciente.
-     */
-    public function update(Request $request, Paciente $paciente)
+    public function update(Request $request, $id)
     {
-        $user = $paciente->user; // Obtenemos el usuario relacionado
+        // 1. Buscar el paciente
+        $paciente = \App\Models\Paciente::find($id);
 
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+        if (!$paciente) {
+            return response()->json(['message' => 'Paciente no encontrado'], 404);
+        }
+
+        // 2. Validar (Igual que en store, pero el email debe ignorar el ID actual)
+        $validated = $request->validate([
+            'nombre' => 'required|string|max:255',
+            'apellidos' => 'required|string|max:255',
+            // La validación unique ignora el ID de ESTE paciente para que no de error si no cambias el email
+            'email' => 'required|email|unique:pacientes,email,' . $id,
+            'telefono' => 'required|string|max:20',
+            'seguro' => 'nullable|string|max:50'
         ]);
 
-        try {
-            DB::beginTransaction();
+        // 3. Actualizar
+        $paciente->update($validated);
 
-            // 1. Actualizar el Usuario
-            $user->update([
-                'name' => $request->name,
-                'email' => $request->email,
-            ]);
-
-            // 2. Actualizar el Paciente (no hay campos extra por ahora)
-            // $paciente->update([...]);
-
-            // Opcional: si se quiere cambiar la contraseña
-            if ($request->filled('password')) {
-                $request->validate(['password' => 'min:8|confirmed']);
-                $user->update(['password' => Hash::make($request->password)]);
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'message' => 'Paciente actualizado exitosamente',
-                'paciente' => $paciente->load('user')
-            ], 200);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'message' => 'Error al actualizar el paciente',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return response()->json($paciente);
     }
-
     /**
-     * DELETE: Borra un Paciente (Borra el Usuario y el Paciente en cascada).
+     * DELETE: Borra un paciente directamente por su ID.
      */
-    public function destroy(Paciente $paciente)
+    public function destroy($id)
     {
-        try {
-            // Borramos el Usuario. La BBDD (onDelete('cascade'))
-            // debería borrar automáticamente el registro 'pacientes'.
-            User::destroy($paciente->user_id);
+        // 1. Buscamos el paciente en la tabla 'pacientes'
+        $paciente = \App\Models\Paciente::find($id);
 
-            return response()->json(null, 204); // 204: No Content
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Error al eliminar el paciente',
-                'error' => $e->getMessage()
-            ], 500);
+        // 2. Si no existe, error 404
+        if (!$paciente) {
+            return response()->json(['message' => 'Paciente no encontrado'], 404);
         }
+
+        // 3. Lo borramos
+        $paciente->delete();
+
+        return response()->json(['message' => 'Paciente eliminado correctamente']);
     }
 }

@@ -1,0 +1,37 @@
+<h2 mat-dialog-title>{{ data ? 'Editar' : 'Nuevo' }} Doctor</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="doctorForm" class="formulario-columna">
+    <mat-form-field appearance="outline">
+      <mat-label>Nombre</mat-label>
+      <input matInput formControlName="nombre" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Apellidos</mat-label>
+      <input matInput formControlName="apellidos" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Especialidad</mat-label>
+      <input matInput formControlName="especialidad" placeholder="Ej. Biomecánica" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Email</mat-label>
+      <input matInput formControlName="email" type="email" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Teléfono</mat-label>
+      <input matInput formControlName="telefono" />
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancelar()">Cancelar</button>
+  <button mat-raised-button color="primary" (click)="guardar()" [disabled]="doctorForm.invalid">
+    Guardar
+  </button>
+</mat-dialog-actions>

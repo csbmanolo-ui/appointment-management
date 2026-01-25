@@ -3,151 +3,81 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Doctor;
-use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;   // <-- Para Transacciones
-use Illuminate\Support\Facades\Hash; // <-- Para encriptar la contraseña
+use App\Models\Doctor;
 
 class DoctorController extends Controller
 {
     /**
-     * READ: Muestra todos los doctores con su info de usuario y especialidad.
+     * GET: Listar todos los doctores
      */
     public function index()
     {
-        // 'with' carga las relaciones para evitar consultas N+1 (Eager Loading)
-        $doctores = Doctor::with(['user', 'especialidad'])->get();
-        return response()->json($doctores);
+        // Devolvemos todos los registros de la tabla 'doctors'
+        return response()->json(Doctor::all());
     }
 
     /**
-     * CREATE: Registra un nuevo Doctor (Usuario + Perfil Doctor).
+     * POST: Crear un nuevo doctor
      */
     public function store(Request $request)
     {
-        $request->validate([
-            // Datos para la tabla 'users'
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-
-            // Datos para la tabla 'doctores'
-            'especialidad_id' => 'required|integer|exists:especialidades,id'
+        // 1. Validamos los datos que vienen del formulario Angular
+        $validated = $request->validate([
+            'nombre'       => 'required|string|max:255',
+            'apellidos'    => 'required|string|max:255',
+            'especialidad' => 'required|string|max:255',
+            'email'        => 'required|email|unique:doctors,email', // Verifica único en tabla doctors
+            'telefono'     => 'required|string|max:20',
         ]);
 
-        // Usamos una transacción para asegurar que ambas tablas se creen
-        try {
-            DB::beginTransaction();
+        // 2. Creamos el registro (el campo 'color' se pone automático por defecto en la BD si no se envía)
+        $doctor = Doctor::create($validated);
 
-            // 1. Crear el Usuario
-            $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'password' => Hash::make($request->password)
-            ]);
+        // 3. Devolvemos éxito
+        return response()->json($doctor, 201);
+    }
 
-            // 2. Asignar el Rol
-            $user->assignRole('Doctor');
+    /**
+     * PUT: Actualizar un doctor existente
+     */
+    public function update(Request $request, $id)
+    {
+        // 1. Buscamos el doctor
+        $doctor = Doctor::find($id);
 
-            // 3. Crear el Doctor (usando la relación que definimos en User.php)
-            $doctor = $user->doctor()->create([
-                'especialidad_id' => $request->especialidad_id
-            ]);
-
-            DB::commit(); // Todo salió bien, confirmar cambios
-
-            return response()->json([
-                'message' => 'Doctor creado exitosamente',
-                'doctor' => $doctor->load(['user', 'especialidad']) // Devolver el doctor con sus relaciones
-            ], 201);
-
-        } catch (\Exception $e) {
-            DB::rollBack(); // Algo salió mal, deshacer cambios
-            return response()->json([
-                'message' => 'Error al crear el doctor',
-                'error' => $e->getMessage()
-            ], 500);
+        if (!$doctor) {
+            return response()->json(['message' => 'Doctor no encontrado'], 404);
         }
-    }
 
-    /**
-     * READ: Muestra un solo doctor.
-     */
-    public function show(Doctor $doctore) // Laravel usa 'doctore' (singular de doctores)
-    {
-        return response()->json($doctore->load(['user', 'especialidad']));
-    }
-
-    /**
-     * UPDATE: Actualiza un doctor (Usuario + Perfil Doctor).
-     */
-    public function update(Request $request, Doctor $doctore)
-    {
-        $user = $doctore->user; // Obtenemos el usuario relacionado
-
-        $request->validate([
-            // Datos para 'users'
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id, // Ignora el email del propio usuario
-
-            // Datos para 'doctores'
-            'especialidad_id' => 'required|integer|exists:especialidades,id'
+        // 2. Validamos (ignora el email propio para que no de error de duplicado)
+        $validated = $request->validate([
+            'nombre'       => 'required|string|max:255',
+            'apellidos'    => 'required|string|max:255',
+            'especialidad' => 'required|string|max:255',
+            'email'        => 'required|email|unique:doctors,email,' . $id,
+            'telefono'     => 'required|string|max:20',
         ]);
 
-        try {
-            DB::beginTransaction();
+        // 3. Actualizamos
+        $doctor->update($validated);
 
-            // 1. Actualizar el Usuario
-            $user->update([
-                'name' => $request->name,
-                'email' => $request->email,
-            ]);
-
-            // 2. Actualizar el Doctor
-            $doctore->update([
-                'especialidad_id' => $request->especialidad_id
-            ]);
-
-            // Opcional: si se quiere cambiar la contraseña
-            if ($request->filled('password')) {
-                $request->validate(['password' => 'min:8|confirmed']);
-                $user->update(['password' => Hash::make($request->password)]);
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'message' => 'Doctor actualizado exitosamente',
-                'doctor' => $doctore->load(['user', 'especialidad'])
-            ], 200);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'message' => 'Error al actualizar el doctor',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return response()->json($doctor);
     }
 
     /**
-     * DELETE: Borra un Doctor (Borra el Usuario y el Doctor en cascada).
+     * DELETE: Eliminar un doctor
      */
-    public function destroy(Doctor $doctore)
+    public function destroy($id)
     {
-        try {
-            // Borramos el Usuario. La BBDD (onDelete('cascade'))
-            // debería borrar automáticamente el registro 'doctores' asociado.
-            User::destroy($doctore->user_id);
+        $doctor = Doctor::find($id);
 
-            return response()->json(null, 204); // 204: No Content
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Error al eliminar el doctor',
-                'error' => $e->getMessage()
-            ], 500);
+        if (!$doctor) {
+            return response()->json(['message' => 'Doctor no encontrado'], 404);
         }
+
+        $doctor->delete();
+
+        return response()->json(['message' => 'Doctor eliminado correctamente']);
     }
 }

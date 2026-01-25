@@ -12,19 +12,24 @@ class Paciente extends Model
     /**
      * El nombre de la tabla asociada con el modelo.
      */
-    protected $table = 'pacientes'; // <-- Para evitar el error de plural
+    protected $table = 'pacientes';
 
     /**
      * Los atributos que se pueden asignar masivamente.
+     * IMPORTANTE: Aquí deben estar los campos que envías desde Angular.
      */
     protected $fillable = [
-        'user_id',
-        // Puedes añadir más campos específicos del paciente aquí
-        // ej: 'fecha_nacimiento', 'direccion', etc.
+        // 'user_id', // Descomenta si usas relación con usuarios más adelante
+        'nombre',
+        'apellidos',
+        'email',
+        'telefono',
+        'seguro'
     ];
 
-    // --- RELACIONES ---
-    // Un paciente pertenece a un Usuario (para login)
+    // --- RELACIONES (Opcionales por ahora) ---
+
+    // Un paciente pertenece a un Usuario (si decides vincularlos a login)
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -35,4 +40,3 @@ class Paciente extends Model
         return $this->hasMany(Cita::class);
     }
 }
-
